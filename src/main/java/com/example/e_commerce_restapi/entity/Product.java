@@ -24,6 +24,9 @@ public class Product extends BaseEntity{
 
     private Integer stock;
 
+    @Version
+    private Integer version;
+
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;

@@ -39,8 +39,7 @@ public class ProductServiceImpl implements ProductService {
 
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException(
-                        "Category not found with id: " + categoryId
-                ));
+                        "Category not found with id: " + categoryId));
 
         product.setCategory(category);
         Product saveProduct = productRepository.save(product);
@@ -51,16 +50,17 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse update(Long id, ProductRequest request) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException(
-                        "Product not found with id: " + id
-                ));
+                        "Product not found with id: " + id));
 
-        modelMapper.map(request, product);
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setStock(request.getStock());
 
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new RuntimeException(
-                            "Category not found with id: " + request.getCategoryId()
-                    ));
+                            "Category not found with id: " + request.getCategoryId()));
             product.setCategory(category);
         }
 
@@ -72,8 +72,7 @@ public class ProductServiceImpl implements ProductService {
     public void delete(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException(
-                        "Product not found with id: " + id
-                ));
+                        "Product not found with id: " + id));
         productRepository.delete(product);
     }
 

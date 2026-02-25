@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.persistence.OptimisticLockException;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping(path = "/order")
@@ -24,7 +26,15 @@ public class OrderController {
     }
 
     @PostMapping("/place")
-    public ResponseEntity<OrderResponse> place(Authentication auth, @Valid @RequestBody OrderRequest request) {
-        return ResponseEntity.ok(orderService.placeOrder(auth.getName(),request));
+    public ResponseEntity<?> place(Authentication auth, @Valid @RequestBody OrderRequest request) {
+        try {
+            OrderResponse response = orderService.placeOrder(auth.getName(), request);
+            return ResponseEntity.ok(response);
+        } catch (OptimisticLockException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("این محصول در حال حاضر توسط کاربر دیگری در حال خرید است");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

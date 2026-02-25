@@ -9,13 +9,16 @@ import com.example.e_commerce_restapi.repository.CartRepository;
 import com.example.e_commerce_restapi.repository.OrderRepository;
 import com.example.e_commerce_restapi.repository.ProductRepository;
 import com.example.e_commerce_restapi.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import jakarta.persistence.OptimisticLockException;
 
+@Slf4j  // اضافه کن برای لاگ
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -30,18 +33,16 @@ public class OrderService {
     @Transactional
     public OrderResponse placeOrder(String email, OrderRequest request) {
 
-
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() ->{
-                    return   new RuntimeException("User not found");
-                });
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         Cart cart = cartRepository.findByUser(user)
-                .orElseThrow(() ->{
-                    return new RuntimeException("Cart empty");
-                });
+                .orElseThrow(() -> new RuntimeException("Cart empty"));
+
         if (cart.getItems().isEmpty()) {
             throw new RuntimeException("Cart is empty");
         }
+
         Order order = new Order();
         order.setUser(user);
         order.setStatus(OrderStatus.PLACED);
@@ -51,54 +52,87 @@ public class OrderService {
 
         for (CartItem ci : cart.getItems()) {
 
-            Product product = ci.getProduct();
+            Product product = productRepository.findById(ci.getProduct().getId())
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
+
             if (product.getStock() < ci.getQuantity()){
-                throw new RuntimeException("Insufficient stock");
+                throw new RuntimeException("Insufficient stock for product: " + product.getName());
             }
+
             product.setStock(product.getStock() - ci.getQuantity());
+            productRepository.save(product);
+
             OrderItem oi = new OrderItem();
             oi.setOrder(order);
             oi.setProduct(product);
             oi.setQuantity(ci.getQuantity());
             oi.setPriceAtPurchase(product.getPrice());
             order.getOrderItems().add(oi);
+
             total = total.add(
                     product.getPrice().multiply(
                             BigDecimal.valueOf(ci.getQuantity())));
         }
+
         order.setTotalAmount(total);
-        cart.getItems().clear(); // Empty cart after order
-        Order saveOrder=  orderRepository.save(order);
 
-        EmailDetails orderEmail = new EmailDetails();
-        orderEmail.setRecipient(email);
-        orderEmail.setSubject("Order Confirmation");
-        orderEmail.setMessageBody(
-                "Your order #" + saveOrder.getId() + " has been placed successfully.\n" +
-                        "Total Amount: $" + total + "\n\n" +
-                        "Thank you for shopping with us!"
-        );
-        emailService.sendEmail(orderEmail);
+        // پاک کردن سبد خرید بعد از ذخیره سفارش
+        cart.getItems().clear();
+        cartRepository.save(cart);  // این خط رو اضافه کن
 
+        Order savedOrder = orderRepository.save(order);
+        OrderResponse response = mapToOrderResponse(savedOrder);
 
-        return mapToOrderResponse(saveOrder);
+        // ارسال ایمیل
+        try {
+            EmailDetails orderEmail = new EmailDetails();
+            orderEmail.setRecipient(email);
+            orderEmail.setSubject("Order Confirmation");
+            orderEmail.setMessageBody(
+                    "Your order #" + savedOrder.getId() + " has been placed successfully.\n" +
+                            "Total Amount: $" + total + "\n\n" +
+                            "Thank you for shopping with us!"
+            );
+            emailService.sendEmail(orderEmail);
+        } catch (Exception e) {
+            log.error("Failed to send email but order saved: {}", e.getMessage());
+        }
+
+        return response;
     }
-    private OrderItemResponse mapToOrderItemResponse(OrderItem item) {
+    // متد جدا برای ارسال ایمیل - خارج از تراکنش اصلی
+    private void sendOrderConfirmationEmail(String email, Order order, BigDecimal total) {
+        try {
+            EmailDetails orderEmail = new EmailDetails();
+            orderEmail.setRecipient(email);
+            orderEmail.setSubject("Order Confirmation");
+            orderEmail.setMessageBody(
+                    "Your order #" + order.getId() + " has been placed successfully.\n" +
+                            "Total Amount: $" + total + "\n\n" +
+                            "Thank you for shopping with us!"
+            );
+            //emailService.sendEmail(orderEmail);
+            log.info("ایمیل تأیید سفارش با موفقیت برای {} ارسال شد", email);
+        } catch (Exception e) {
+            // اینجا فقط لاگ میکنیم، اجازه نمیدیم خطای ایمیل باعث rollback بشه
+            log.error("خطا در ارسال ایمیل تأیید سفارش برای {}: {}", email, e.getMessage());
+        }
+    }
 
+    private OrderItemResponse mapToOrderItemResponse(OrderItem item) {
         OrderItemResponse dto = new OrderItemResponse();
         dto.setProductId(item.getProduct().getId());
         dto.setProductName(item.getProduct().getName());
         dto.setPriceAtPurchase(item.getPriceAtPurchase());
         dto.setQuantity(item.getQuantity());
-
         dto.setSubTotal(
                 item.getPriceAtPurchase()
                         .multiply(BigDecimal.valueOf(item.getQuantity()))
         );
         return dto;
     }
-    private OrderResponse mapToOrderResponse(Order order) {
 
+    private OrderResponse mapToOrderResponse(Order order) {
         OrderResponse response = new OrderResponse();
         response.setOrderId(order.getId());
         response.setUserId(order.getUser().getId());
