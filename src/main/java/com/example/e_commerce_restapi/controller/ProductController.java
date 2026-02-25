@@ -17,6 +17,7 @@ public class ProductController {
     public ProductController(ProductService productService) {
         this.productService = productService;
     }
+
     @GetMapping
     @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN')")
     public ResponseEntity<List<ProductResponse>> getAllProducts(){

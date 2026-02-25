@@ -14,6 +14,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Table(name ="orders")
 public class Order extends BaseEntity {
 
     @Id

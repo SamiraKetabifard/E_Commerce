@@ -1,5 +1,6 @@
 package com.example.e_commerce_restapi.service;
 
+import com.example.e_commerce_restapi.dto.EmailDetails;
 import com.example.e_commerce_restapi.dto.request.OrderRequest;
 import com.example.e_commerce_restapi.dto.response.OrderItemResponse;
 import com.example.e_commerce_restapi.dto.response.OrderResponse;
@@ -24,6 +25,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final ModelMapper modelMapper;
+    private final EmailService emailService;
 
     @Transactional
     public OrderResponse placeOrder(String email, OrderRequest request) {
@@ -67,6 +69,18 @@ public class OrderService {
         order.setTotalAmount(total);
         cart.getItems().clear(); // Empty cart after order
         Order saveOrder=  orderRepository.save(order);
+
+        EmailDetails orderEmail = new EmailDetails();
+        orderEmail.setRecipient(email);
+        orderEmail.setSubject("Order Confirmation");
+        orderEmail.setMessageBody(
+                "Your order #" + saveOrder.getId() + " has been placed successfully.\n" +
+                        "Total Amount: $" + total + "\n\n" +
+                        "Thank you for shopping with us!"
+        );
+        emailService.sendEmail(orderEmail);
+
+
         return mapToOrderResponse(saveOrder);
     }
     private OrderItemResponse mapToOrderItemResponse(OrderItem item) {

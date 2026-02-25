@@ -10,9 +10,6 @@ import java.util.List;
 @Setter
 public class OrderRequest {
 
-    @NotNull
-    private Long orderId;
-
     @NotEmpty
     private List<OrderItemRequest> items;
 }
