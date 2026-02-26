@@ -95,7 +95,6 @@ public class OrderService {
         } catch (Exception e) {
             log.error("Failed to send email but order saved: {}", e.getMessage());
         }
-
         return response;
     }
 
@@ -107,8 +106,7 @@ public class OrderService {
         dto.setQuantity(item.getQuantity());
         dto.setSubTotal(
                 item.getPriceAtPurchase()
-                        .multiply(BigDecimal.valueOf(item.getQuantity()))
-        );
+                        .multiply(BigDecimal.valueOf(item.getQuantity())));
         return dto;
     }
 
