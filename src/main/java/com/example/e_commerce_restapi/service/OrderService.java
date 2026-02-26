@@ -16,9 +16,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import jakarta.persistence.OptimisticLockException;
-
-@Slf4j  // اضافه کن برای لاگ
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -76,14 +74,14 @@ public class OrderService {
 
         order.setTotalAmount(total);
 
-        // پاک کردن سبد خرید بعد از ذخیره سفارش
+        // Clear the cart after saving the order
         cart.getItems().clear();
-        cartRepository.save(cart);  // این خط رو اضافه کن
+        cartRepository.save(cart);
 
         Order savedOrder = orderRepository.save(order);
         OrderResponse response = mapToOrderResponse(savedOrder);
 
-        // ارسال ایمیل
+        // Send confirmation email
         try {
             EmailDetails orderEmail = new EmailDetails();
             orderEmail.setRecipient(email);
@@ -99,24 +97,6 @@ public class OrderService {
         }
 
         return response;
-    }
-    // متد جدا برای ارسال ایمیل - خارج از تراکنش اصلی
-    private void sendOrderConfirmationEmail(String email, Order order, BigDecimal total) {
-        try {
-            EmailDetails orderEmail = new EmailDetails();
-            orderEmail.setRecipient(email);
-            orderEmail.setSubject("Order Confirmation");
-            orderEmail.setMessageBody(
-                    "Your order #" + order.getId() + " has been placed successfully.\n" +
-                            "Total Amount: $" + total + "\n\n" +
-                            "Thank you for shopping with us!"
-            );
-            //emailService.sendEmail(orderEmail);
-            log.info("ایمیل تأیید سفارش با موفقیت برای {} ارسال شد", email);
-        } catch (Exception e) {
-            // اینجا فقط لاگ میکنیم، اجازه نمیدیم خطای ایمیل باعث rollback بشه
-            log.error("خطا در ارسال ایمیل تأیید سفارش برای {}: {}", email, e.getMessage());
-        }
     }
 
     private OrderItemResponse mapToOrderItemResponse(OrderItem item) {

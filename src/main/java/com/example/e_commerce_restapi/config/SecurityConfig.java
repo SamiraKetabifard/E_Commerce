@@ -1,6 +1,6 @@
 package com.example.e_commerce_restapi.config;
 
-import com.example.e_commerce_restapi.security.UserDetailsService;
+import com.example.e_commerce_restapi.security.UserDetailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,7 +30,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
-    private final UserDetailsService userDetailsService;
+    private final UserDetailService userDetailService;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
@@ -54,7 +54,7 @@ public class SecurityConfig {
     //Verifies credentials during login
     public AuthenticationProvider authenticationProvider(){
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
+        provider.setUserDetailsService(userDetailService);
         provider.setPasswordEncoder(new BCryptPasswordEncoder());
         return provider;
     }

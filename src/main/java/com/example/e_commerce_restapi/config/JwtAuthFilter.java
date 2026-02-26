@@ -1,6 +1,6 @@
 package com.example.e_commerce_restapi.config;
 
-import com.example.e_commerce_restapi.security.UserDetailsService;
+import com.example.e_commerce_restapi.security.UserDetailService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,7 +21,7 @@ import java.io.IOException;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserDetailsService userDetailsService;
+    private final UserDetailService userDetailService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -43,7 +43,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         //Check if authentication already exists
         if (username!=null && SecurityContextHolder.getContext().getAuthentication()== null){
             //the user was called by its name as the validation of token required username not email
-            UserDetails userDetails= userDetailsService.loadUserByUsername(username);
+            UserDetails userDetails= userDetailService.loadUserByUsername(username);
 
             if (jwtService.validateToken(token,userDetails)){
                 //Create Authentication object
